@@ -64,7 +64,7 @@ public class FriendMod implements ModInitializer {
                     int z = (int) client.player.getZ();
                     String name = client.player.getName().getString();
                     // Manda le coordinate come messaggio normale in chat
-                    client.player.networkHandler.sendChatMessage(name + " è a: " + x + ", " + y + ", " + z);
+                    client.player.networkHandler.sendChatMessage(x + ", " + y + ", " + z);
                 }
                 return false; // blocca il messaggio "(c)" originale
             }
