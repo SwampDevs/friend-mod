@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "friend_mod",
+  "version": "${version}",
+  "name": "Friend Mod",
+  "description": "Adds /friend add/remove, death notifications and (c) coordinates.",
+  "authors": ["You"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.friendmod.FriendMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21"
+  }
+}
