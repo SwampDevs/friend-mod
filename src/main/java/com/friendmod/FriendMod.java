@@ -2,9 +2,11 @@ package com.friendmod;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -14,34 +16,43 @@ public class FriendMod implements ModInitializer {
     @Override
     public void onInitialize() {
 
-        // Comando /friend
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(CommandManager.literal("friend")
-                .then(CommandManager.literal("add")
-                    .then(CommandManager.argument("name", StringArgumentType.word())
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+            dispatcher.register(ClientCommandManager.literal("friend")
+                .then(ClientCommandManager.literal("add")
+                    .then(ClientCommandManager.argument("name", StringArgumentType.word())
                         .executes(ctx -> {
                             String name = StringArgumentType.getString(ctx, "name");
-                            ServerPlayerEntity sender = ctx.getSource().getPlayer();
-                            if (sender == null) return 0;
-                            FriendData.get(sender.getUuidAsString()).addFriend(name);
-                            FriendData.save(sender.getUuidAsString());
-                            sender.sendMessage(Text.literal("§aAggiunto §e" + name + " §aai tuoi amici!"), false);
+                            MinecraftClient client = MinecraftClient.getInstance();
+                            if (client.player == null) return 0;
+                            String uuid = client.player.getUuidAsString();
+                            FriendData.get(uuid).addFriend(name);
+                            FriendData.save(uuid);
+                            client.player.sendMessage(Text.literal("§aAggiunto §e" + name + " §aai tuoi amici!"), false);
                             return 1;
                         })))
-                .then(CommandManager.literal("remove")
-                    .then(CommandManager.argument("name", StringArgumentType.word())
+                .then(ClientCommandManager.literal("remove")
+                    .then(ClientCommandManager.argument("name", StringArgumentType.word())
                         .executes(ctx -> {
                             String name = StringArgumentType.getString(ctx, "name");
-                            ServerPlayerEntity sender = ctx.getSource().getPlayer();
-                            if (sender == null) return 0;
-                            FriendData.get(sender.getUuidAsString()).removeFriend(name);
-                            FriendData.save(sender.getUuidAsString());
-                            sender.sendMessage(Text.literal("§cRimosso §e" + name + " §cdai tuoi amici."), false);
+                            MinecraftClient client = MinecraftClient.getInstance();
+                            if (client.player == null) return 0;
+                            String uuid = client.player.getUuidAsString();
+                            FriendData.get(uuid).removeFriend(name);
+                            FriendData.save(uuid);
+                            client.player.sendMessage(Text.literal("§cRimosso §e" + name + " §cdai tuoi amici."), false);
                             return 1;
-                        }))));
+                        })))
+                .then(ClientCommandManager.literal("list")
+                    .executes(ctx -> {
+                        MinecraftClient client = MinecraftClient.getInstance();
+                        if (client.player == null) return 0;
+                        String uuid = client.player.getUuidAsString();
+                        String list = FriendData.get(uuid).getFriends().toString();
+                        client.player.sendMessage(Text.literal("§6Amici: §f" + list), false);
+                        return 1;
+                    })));
         });
 
-        // Evento morte: notifica gli amici
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
             if (!(entity instanceof ServerPlayerEntity dead)) return;
             String deadName = dead.getName().getString();
@@ -59,7 +70,6 @@ public class FriendMod implements ModInitializer {
             }
         });
 
-        // Chat "(c)" -> invia coordinate
         ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) -> {
             String content = message.getContent().getString();
             if (content.trim().equals("(c)")) {
@@ -70,8 +80,9 @@ public class FriendMod implements ModInitializer {
                 if (sender.getServer() != null) {
                     Text coords = Text.literal("§e" + name + " §7è a: §f" + x + ", " + y + ", " + z);
                     sender.getServer().getPlayerManager().broadcast(coords, false);
+                    sender.sendMessage(coords, false);
                 }
-                return false; // blocca il messaggio originale "(c)"
+                return false;
             }
             return true;
         });

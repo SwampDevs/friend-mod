@@ -3,10 +3,10 @@
   "id": "friend_mod",
   "version": "${version}",
   "name": "Friend Mod",
-  "description": "Adds /friend add/remove, death notifications and (c) coordinates.",
-  "authors": ["You"],
+  "description": "Adds /friend add/remove/list, death notifications and (c) coordinates.",
+  "authors": ["SwampDevs"],
   "license": "MIT",
-  "environment": "*",
+  "environment": "client",
   "entrypoints": {
     "main": ["com.friendmod.FriendMod"]
   },

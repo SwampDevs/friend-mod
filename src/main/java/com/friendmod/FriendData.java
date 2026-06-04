@@ -24,6 +24,7 @@ public class FriendData {
     public void addFriend(String name) { friends.add(name); }
     public void removeFriend(String name) { friends.remove(name); }
     public boolean isFriend(String name) { return friends.contains(name); }
+    public Set<String> getFriends() { return Collections.unmodifiableSet(friends); }
 
     public static void save(String uuid) {
         try {
