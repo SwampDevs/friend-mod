@@ -4,10 +4,10 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 
@@ -16,6 +16,7 @@ public class FriendMod implements ModInitializer {
     @Override
     public void onInitialize() {
 
+        // Comandi client-side
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             dispatcher.register(ClientCommandManager.literal("friend")
                 .then(ClientCommandManager.literal("add")
@@ -53,6 +54,24 @@ public class FriendMod implements ModInitializer {
                     })));
         });
 
+        // (c) in chat -> sostituisce il messaggio con le coordinate (client-side)
+        ClientSendMessageEvents.ALLOW_CHAT.register(message -> {
+            if (message.trim().equals("(c)")) {
+                MinecraftClient client = MinecraftClient.getInstance();
+                if (client.player != null) {
+                    int x = (int) client.player.getX();
+                    int y = (int) client.player.getY();
+                    int z = (int) client.player.getZ();
+                    String name = client.player.getName().getString();
+                    // Manda le coordinate come messaggio normale in chat
+                    client.player.networkHandler.sendChatMessage(name + " è a: " + x + ", " + y + ", " + z);
+                }
+                return false; // blocca il messaggio "(c)" originale
+            }
+            return true;
+        });
+
+        // Notifica morte amici (server-side, funziona se la mod è sul server)
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
             if (!(entity instanceof ServerPlayerEntity dead)) return;
             String deadName = dead.getName().getString();
@@ -70,19 +89,11 @@ public class FriendMod implements ModInitializer {
             }
         });
 
+        // (c) server-side come fallback se la mod è sul server
         ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) -> {
             String content = message.getContent().getString();
-            if (content.trim().equals("(c)")) {
-                int x = (int) sender.getX();
-                int y = (int) sender.getY();
-                int z = (int) sender.getZ();
-                String name = sender.getName().getString();
-                if (sender.getServer() != null) {
-                    Text coords = Text.literal("§e" + name + " §7è a: §f" + x + ", " + y + ", " + z);
-                    sender.getServer().getPlayerManager().broadcast(coords, false);
-                    sender.sendMessage(coords, false);
-                }
-                return false;
+            if (content.contains("è a:") && !content.startsWith("(c)")) {
+                return true; // lascia passare i messaggi coordinate già formattati
             }
             return true;
         });
